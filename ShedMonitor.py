@@ -8,6 +8,7 @@ import os
 import argparse
 import logging
 import time
+import numpy as np
 import urllib2
 
 import DHT22
@@ -66,10 +67,29 @@ def main():
     logger.info('#### Reading Temperature and Humidity Sensors ####')
     logger.info('Reading DHT22')
     DHT = DHT22.DHT22()
-    DHT.read()
-    logger.info('  Temperature = {:.3f} C, {:.3f} F'.format(DHT.temperature_C, DHT.temperature_F))
-    logger.info('  Humidity = {:.1f} %'.format(DHT.humidity))
+    temps = []
+    hums = []
+    for i in range(0,3):
+        DHT.read()
+        logger.debug('  Temperature = {:.3f} C, {:.3f} F'.format(DHT.temperature_C, DHT.temperature_F))
+        logger.debug('  Humidity = {:.1f} %'.format(DHT.humidity))
+        temps.append(DHT.temperature_F)
+        hums.append(DHT.humidity)
+    DHT_temperature_F = np.median(temps)
+    DHT_humidity = np.median(hums)
+    logger.info('  Temperature = {:.3f} F'.format(DHT_temperature_F))
+    logger.info('  Humidity = {:.1f} %'.format(DHT_humidity))
 
+    logger.info('Reading DS18B20')
+    sensor = DS18B20.DS18B20()
+    sensor.read()
+    for temp in sensor.temperatures_C:
+        logger.info('  Temperature = {:.3f} F'.format(temp*9./5.+32.))
+
+
+    ##-------------------------------------------------------------------------
+    ## Determine Status Using Humidity
+    ##-------------------------------------------------------------------------
     if DHT.humidity < 50:
         status = 'OK'
     elif DHT.humidity < 80:
@@ -78,19 +98,40 @@ def main():
         status = 'WET'
     logger.info('  Status: {}'.format(status))
 
-    logger.info('Reading DS18B20')
-    sensor = DS18B20.DS18B20()
-    sensor.read()
-    for temp in sensor.temperatures_C:
-        logger.info('  Temperature = {:.3f} C, {:.3f} F'.format(temp, temp*9./5.+32.))
+
+    ##-------------------------------------------------------------------------
+    ## Determine Status and Alarm Using History
+    ##-------------------------------------------------------------------------
+    datestring = time.strftime('%Y%m%d_log.txt', time.localtime())
+    timestring = time.strftime('%Y/%m/%d %H:%M:%S HST', time.localtime())
+    datafile = os.path.join('/', 'home', 'joshw', 'logs', datestring)
+    if os.path.exists(datafile):
+        logger.debug("Reading data from file: {0}".format(datafile))
+        data = ascii.read(datafile, guess=False,
+                          header_start=0, data_start=1,
+                          Reader=ascii.basic.Basic,
+                          converters={
+                          'date': [ascii.convert_numpy('S10')],
+                          'time': [ascii.convert_numpy('S12')],
+                          'temp1': [ascii.convert_numpy('f4')],
+                          'temp2': [ascii.convert_numpy('f4')],
+                          'temp3': [ascii.convert_numpy('f4')],
+                          'hum': [ascii.convert_numpy('f4')],
+                          'status': [ascii.convert_numpy('S5')],
+                          })
+    if len(data) > 15:
+        logger.debug("Establishing history.")
+        translation = {'OK':0, 'HUMID':1, 'WET':2, 'HUMID-ALARM':1, 'WET-ALARM':2}
+        recent_status_vals = [translation[val] for val in data['status'][-10:]]
+        recent_status = np.mean(recent_status_vals)
+        recent_alarm = ('HUMID-ALARM' in data['status'][-10:]) or ('WET-ALARM' in data['status'][-10:])
+        if (recent_status > 1.5) and not status == 'OK' and not recent_alarm:
+            status = status + '-ALARM'
 
 
     ##-------------------------------------------------------------------------
     ## Record Values to Table
     ##-------------------------------------------------------------------------
-    datestring = time.strftime('%Y%m%d_log.txt', time.localtime())
-    timestring = time.strftime('%Y/%m/%d %H:%M:%S HST', time.localtime())
-    datafile = os.path.join('/', 'home', 'joshw', 'logs', datestring)
     logger.debug("Preparing astropy table object for data file {}".format(datafile))
     if not os.path.exists(datafile):
         logger.debug("Making new astropy table object")
@@ -168,7 +209,7 @@ def main():
     except:
         logger.critical('  Upload failed')
         logger.critical('Unexpected error: {}'.format(sys.exc_info()[0]))
-    logger.debug('Done')
+    logger.debug('#### Done ####')
 
 
 

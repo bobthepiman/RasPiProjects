@@ -32,11 +32,11 @@ class DHT22(object):
         return time.strftime('%Y/%m/%d %H:%M:%S UT', self.time_struct)
 
     def read(self):
-#         DHTexec = os.path.join('/', 'home', 'joshw', 'bin', \
-#                                'Adafruit-Raspberry-Pi-Python-Code', \
-#                                'Adafruit_DHT_Driver', 'Adafruit_DHT')
+        DHTexec = os.path.join('/', 'home', 'joshw', 'bin', \
+                               'Adafruit-Raspberry-Pi-Python-Code', \
+                               'Adafruit_DHT_Driver', 'Adafruit_DHT')
 #         DHTexec = os.path.join('/usr', 'local', 'bin', 'Adafruit_DHT')
-        DHTexec = os.path.join('Adafruit_DHT')
+#         DHTexec = os.path.join('Adafruit_DHT')
         temp_match = None
         hum_match = None
         while not temp_match and not hum_match:
