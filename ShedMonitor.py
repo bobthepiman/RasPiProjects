@@ -71,14 +71,12 @@ def main():
     hums = []
     for i in range(0,3):
         DHT.read()
-        logger.debug('  Temperature = {:.3f} C, {:.3f} F'.format(DHT.temperature_C, DHT.temperature_F))
-        logger.debug('  Humidity = {:.1f} %'.format(DHT.humidity))
+        logger.debug('  Temperature = {:.3f} F, Humidity = {:.1f} %'.format(DHT.temperature_F, DHT.humidity))
         temps.append(DHT.temperature_F)
         hums.append(DHT.humidity)
     DHT_temperature_F = np.median(temps)
     DHT_humidity = np.median(hums)
-    logger.info('  Temperature = {:.3f} F'.format(DHT_temperature_F))
-    logger.info('  Humidity = {:.1f} %'.format(DHT_humidity))
+    logger.info('  Temperature = {:.3f} F, Humidity = {:.1f} %'.format(DHT_temperature_F, DHT_humidity))
 
     logger.info('Reading DS18B20')
     sensor = DS18B20.DS18B20()
@@ -90,13 +88,15 @@ def main():
     ##-------------------------------------------------------------------------
     ## Determine Status Using Humidity
     ##-------------------------------------------------------------------------
-    if DHT.humidity < 50:
+    threshold_humid = 55
+    threshold_wet = 75
+    if (DHT.humidity < threshold_humid):
         status = 'OK'
-    elif DHT.humidity < 80:
+    elif (DHT.humidity > threshold_humid) and (DHT.humidity < threshold_wet):
         status = 'HUMID'
     else:
         status = 'WET'
-    logger.info('  Status: {}'.format(status))
+    logger.info('Status: {}'.format(status))
 
 
     ##-------------------------------------------------------------------------
@@ -106,7 +106,7 @@ def main():
     timestring = time.strftime('%Y/%m/%d %H:%M:%S HST', time.localtime())
     datafile = os.path.join('/', 'home', 'joshw', 'logs', datestring)
     if os.path.exists(datafile):
-        logger.debug("Reading data from file: {0}".format(datafile))
+        logger.debug("Reading history data from file: {0}".format(datafile))
         data = ascii.read(datafile, guess=False,
                           header_start=0, data_start=1,
                           Reader=ascii.basic.Basic,
@@ -119,13 +119,15 @@ def main():
                           'hum': [ascii.convert_numpy('f4')],
                           'status': [ascii.convert_numpy('S5')],
                           })
+    else:
+        data = []
     if len(data) > 15:
-        logger.debug("Establishing history.")
         translation = {'OK':0, 'HUMID':1, 'WET':2, 'HUMID-ALARM':1, 'WET-ALARM':2}
         recent_status_vals = [translation[val] for val in data['status'][-10:]]
         recent_status = np.mean(recent_status_vals)
         recent_alarm = ('HUMID-ALARM' in data['status'][-10:]) or ('WET-ALARM' in data['status'][-10:])
-        if (recent_status > 1.5) and not status == 'OK' and not recent_alarm:
+        logger.debug('  Recent Status = {:.2f}, Current Status = {}, Recent alarm: {}'.format(recent_status, status, recent_alarm))
+        if (recent_status > 0.5) and not status == 'OK' and not recent_alarm:
             status = status + '-ALARM'
 
 
@@ -134,11 +136,11 @@ def main():
     ##-------------------------------------------------------------------------
     logger.debug("Preparing astropy table object for data file {}".format(datafile))
     if not os.path.exists(datafile):
-        logger.debug("Making new astropy table object")
-        SummaryTable = table.Table(names=('date', 'time', 'temp1', 'temp2', 'temp3', 'hum', 'status'), \
-                                   dtypes=('S10', 'S12', 'f4', 'f4', 'f4', 'f4', 'S5') )
+        logger.debug("  Making new astropy table object")
+        SummaryTable = table.Table(names=('date', 'time', 'temp1', 'temp2', 'temp3', 'hum', 'status', 'threshold humid', 'threshold wet'), \
+                                   dtypes=('S10', 'S12', 'f4', 'f4', 'f4', 'f4', 'S5', 'f4', 'f4') )
     else:
-        logger.info("Reading astropy table object from file: {0}".format(datafile))
+        logger.info("  Reading astropy table object from file: {0}".format(datafile))
         try:
             SummaryTable = ascii.read(datafile, guess=False,
                                       header_start=0, data_start=1,
@@ -151,46 +153,26 @@ def main():
                                       'temp3': [ascii.convert_numpy('f4')],
                                       'hum': [ascii.convert_numpy('f4')],
                                       'status': [ascii.convert_numpy('S5')],
+                                      'threshold humid': [ascii.convert_numpy('f4')],
+                                      'threshold wet': [ascii.convert_numpy('f4')],
                                       })
         except:
-            logger.critical("Failed to read data file: {0} {1} {2}".format(sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2]))
+            logger.critical("  Failed to read data file: {0} {1} {2}".format(sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2]))
     ## Add row to table
-    logger.debug("Writing new row to data table.")
+    logger.debug("  Writing new row to data table.")
     SummaryTable.add_row((timestring[0:10], timestring[11:23], \
                           sensor.temperatures_F[0], sensor.temperatures_F[1], \
-                          DHT.temperature_F, DHT.humidity, status))
+                          DHT.temperature_F, DHT.humidity, status, threshold_humid, threshold_wet))
     ## Write Table to File
-    logger.info("Writing new data file.")
+    logger.info("  Writing new data file.")
     ascii.write(SummaryTable, datafile, Writer=ascii.basic.Basic)
-
-
-
-#     AddHeader = False
-#     if not os.path.exists(datafile):
-#         AddHeader = True
-#     if DHT.temperature_F and DHT.humidity and (len(sensor.temperatures_F) == 2):
-#         logger.info('Writing Results to Data File: {}'.format(datafile))
-#         if DHT.humidity < 50:
-#             status = 'OK'
-#         elif DHT.humidity < 80:
-#             status = 'HUMID'
-#         else:
-#             status = 'WET'
-#         datafileFO = open(datafile, 'a')
-#         if AddHeader:
-#             datafileFO.write('{:<24s} {:>5s} {:>5s} {:>5s} {:>5s} {:>8s}\n'.format( \
-#                              '# Time', 'Temp1', 'Temp2', 'Temp3', 'Hum', 'Status'))
-#         datafileFO.write('{:24s} {:5.1f} {:5.1f} {:5.1f} {:5.1f} {:>8s}\n'.format(timestring, \
-#                          sensor.temperatures_F[0], sensor.temperatures_F[1], \
-#                          DHT.temperature_F, DHT.humidity, status))
-#         datafileFO.close()
 
 
     ## Log to Carriots
     logger.info('Sending Data to Carriots')
-    logger.debug('Creating Device object')
+    logger.debug('  Creating Device object')
     Device = Carriots.Client(device_id="Shed@joshwalawender")
-    logger.debug('Reading api key')
+    logger.debug('  Reading api key')
     Device.read_api_key_from_file(file=os.path.join(os.path.expanduser('~joshw'), '.carriots_api'))
     data_dict = {'Temperature1': sensor.temperatures_F[0], \
                  'Temperature2': sensor.temperatures_F[1], \
@@ -199,7 +181,7 @@ def main():
                  'Status': status
                  }
     logger.debug(data_dict)
-    logger.debug('Uploading data')
+    logger.debug('  Uploading data')
     try:
         Device.upload(data_dict)
     except urllib2.HTTPError as e:
@@ -208,8 +190,8 @@ def main():
         logger.critical('  {}'.format(e.reason))
     except:
         logger.critical('  Upload failed')
-        logger.critical('Unexpected error: {}'.format(sys.exc_info()[0]))
-    logger.debug('#### Done ####')
+        logger.critical('  Unexpected error: {}'.format(sys.exc_info()[0]))
+    logger.info('Done')
 
 
 
