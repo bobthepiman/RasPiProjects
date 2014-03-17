@@ -71,6 +71,7 @@ def main():
                       'temp2': [ascii.convert_numpy('f4')],
                       'temp3': [ascii.convert_numpy('f4')],
                       'hum': [ascii.convert_numpy('f4')],
+                      'AH': [ascii.convert_numpy('f4')],
                       'status': [ascii.convert_numpy('S5')],
                       })
 
@@ -82,20 +83,10 @@ def main():
     PlotFile = os.path.join('/', 'home', 'joshw', 'logs', PlotFileName)
     logger.info("Writing Output File: "+PlotFile)
     dpi=72
-    Figure = pyplot.figure(figsize=(16,12), dpi=dpi)
-    TemperatureAxes = pyplot.axes([0.10, 0.55, 0.9, 0.45])
+    Figure = pyplot.figure(figsize=(16,10), dpi=dpi)
     times = [(time.strptime(val, '%H:%M:%S HST').tm_hour + time.strptime(val, '%H:%M:%S HST').tm_min/60.) for val in data['time'] ]
-    pyplot.plot(times, data['temp1'], 'go', label="Termperature1", mew=0, ms=3)
-    pyplot.plot(times, data['temp2'], 'bo', label="Termperature2", mew=0, ms=3)
-    pyplot.plot(times, data['temp3'], 'ko', label="Termperature3", mew=0, ms=3)
-    pyplot.xticks(range(0,25,1))
-    pyplot.xlim(0,24)
-    pyplot.ylim(65,95)
-    pyplot.xlabel('Hours (HST)')
-    pyplot.ylabel("Temperature (F)")
-    pyplot.grid()
 
-    HumidityAxes = pyplot.axes([0.10, 0.05, 0.9, 0.45])
+    HumidityAxes = pyplot.axes([0.10, 0.40, 0.9, 0.45])
     pyplot.plot(times, data['hum'], 'ko', label="Humidity", mew=0, ms=3)
     pyplot.plot(times, data['threshold humid'], 'y-', label='threshold humidity', linewidth=3, alpha=0.8)
     pyplot.plot(times, data['threshold wet'], 'r-', label='threshold humidity', linewidth=3, alpha=0.8)
@@ -106,12 +97,35 @@ def main():
     pyplot.fill_between(times, 0, data['hum'], where=(data['status']=="WET-ALARM"), color='red', alpha=0.5)
     pyplot.fill_between(times, 90, 100, where=(data['status']=="HUMID-ALARM"), color='yellow', alpha=0.8)
     pyplot.fill_between(times, 90, 100, where=(data['status']=="WET-ALARM"), color='red', alpha=0.8)
-    pyplot.xticks(range(0,25,1))
     pyplot.yticks(range(20,100,10))
-    pyplot.xlim(0,24)
     pyplot.ylim(20,100)
-    pyplot.xlabel('Hours (HST)')
     pyplot.ylabel("Humidity (%)")
+
+    pyplot.xticks(range(0,25,1))
+    pyplot.xlim(0,24)
+    pyplot.xlabel('Hours (HST)')
+    pyplot.grid()
+
+    HumidityAxes = HumidityAxes.twinx()
+    HumidityAxes.set_ylabel('Abs. Hum. (g/m^3)', color='b')
+    pyplot.plot(times, data['AH'], 'bo', label="Abs. Hum.", mew=0, ms=3)
+    pyplot.yticks(range(00,40,5))
+    pyplot.ylim(00,30)
+
+    pyplot.xticks(range(0,25,1))
+    pyplot.xlim(0,24)
+    pyplot.xlabel('Hours (HST)')
+
+
+    TemperatureAxes = pyplot.axes([0.10, 0.05, 0.9, 0.30])
+    pyplot.plot(times, data['temp1'], 'go', label="Termperature1", mew=0, ms=3)
+    pyplot.plot(times, data['temp2'], 'bo', label="Termperature2", mew=0, ms=3)
+    pyplot.plot(times, data['temp3'], 'ko', label="Termperature3", mew=0, ms=3)
+    pyplot.xticks(range(0,25,1))
+    pyplot.xlim(0,24)
+    pyplot.ylim(70,90)
+    pyplot.xlabel('Hours (HST)')
+    pyplot.ylabel("Temperature (F)")
     pyplot.grid()
 
     pyplot.savefig(PlotFile, dpi=dpi, bbox_inches='tight', pad_inches=0.10)

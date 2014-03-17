@@ -14,6 +14,7 @@ import urllib2
 import DHT22
 import DS18B20
 import Carriots
+import humidity
 
 import astropy.io.ascii as ascii
 import astropy.table as table
@@ -68,15 +69,20 @@ def main():
     logger.info('Reading DHT22')
     DHT = DHT22.DHT22()
     temps = []
+    temps_C = []
     hums = []
     for i in range(0,3):
         DHT.read()
         logger.debug('  Temperature = {:.3f} F, Humidity = {:.1f} %'.format(DHT.temperature_F, DHT.humidity))
         temps.append(DHT.temperature_F)
+        temps_C.append(DHT.temperature_C)
         hums.append(DHT.humidity)
     DHT_temperature_F = np.median(temps)
+    DHT_temperature_C = np.median(temps_C)
     DHT_humidity = np.median(hums)
     logger.info('  Temperature = {:.3f} F, Humidity = {:.1f} %'.format(DHT_temperature_F, DHT_humidity))
+    AH = humidity.relative_to_absolute_humidity(DHT_temperature_C, DHT_humidity)
+    logger.info('  Absolute Humidity = {:.2f} g/m^3'.format(AH))
 
     logger.info('Reading DS18B20')
     sensor = DS18B20.DS18B20()
@@ -117,6 +123,7 @@ def main():
                           'temp2': [ascii.convert_numpy('f4')],
                           'temp3': [ascii.convert_numpy('f4')],
                           'hum': [ascii.convert_numpy('f4')],
+                          'AH': [ascii.convert_numpy('f4')],
                           'status': [ascii.convert_numpy('S5')],
                           })
     else:
@@ -137,8 +144,8 @@ def main():
     logger.debug("Preparing astropy table object for data file {}".format(datafile))
     if not os.path.exists(datafile):
         logger.debug("  Making new astropy table object")
-        SummaryTable = table.Table(names=('date', 'time', 'temp1', 'temp2', 'temp3', 'hum', 'status', 'threshold humid', 'threshold wet'), \
-                                   dtypes=('S10', 'S12', 'f4', 'f4', 'f4', 'f4', 'S5', 'f4', 'f4') )
+        SummaryTable = table.Table(names=('date', 'time', 'temp1', 'temp2', 'temp3', 'hum', 'AH', 'status', 'threshold humid', 'threshold wet'), \
+                                   dtypes=('S10', 'S12', 'f4', 'f4', 'f4', 'f4', 'f4', 'S5', 'f4', 'f4') )
     else:
         logger.info("  Reading astropy table object from file: {0}".format(datafile))
         try:
@@ -152,6 +159,7 @@ def main():
                                       'temp2': [ascii.convert_numpy('f4')],
                                       'temp3': [ascii.convert_numpy('f4')],
                                       'hum': [ascii.convert_numpy('f4')],
+                                      'AH': [ascii.convert_numpy('f4')],
                                       'status': [ascii.convert_numpy('S5')],
                                       'threshold humid': [ascii.convert_numpy('f4')],
                                       'threshold wet': [ascii.convert_numpy('f4')],
@@ -162,7 +170,7 @@ def main():
     logger.debug("  Writing new row to data table.")
     SummaryTable.add_row((timestring[0:10], timestring[11:23], \
                           sensor.temperatures_F[0], sensor.temperatures_F[1], \
-                          DHT.temperature_F, DHT.humidity, status, threshold_humid, threshold_wet))
+                          DHT.temperature_F, DHT.humidity, AH, status, threshold_humid, threshold_wet))
     ## Write Table to File
     logger.info("  Writing new data file.")
     ascii.write(SummaryTable, datafile, Writer=ascii.basic.Basic)
@@ -178,6 +186,7 @@ def main():
                  'Temperature2': sensor.temperatures_F[1], \
                  'Temperature3': DHT.temperature_F, \
                  'Humidity': DHT.humidity, \
+                 'Absolute Humidity': AH, \
                  'Status': status
                  }
     logger.debug(data_dict)
