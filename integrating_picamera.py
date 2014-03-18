@@ -56,16 +56,15 @@ def main():
     ##-------------------------------------------------------------------------
     ## 
     ##-------------------------------------------------------------------------
-    camera = picamera.PiCamera()
-
     width = 100
     height = 100
     stream = open('image.data', 'wb')
     # Capture the image in raw RGB format
-    camera.resolution = (width, height)
-    camera.start_preview()
-    time.sleep(1)
-    camera.capture(stream, 'rgb')
+    with picamera.PiCamera() as camera:
+        camera.resolution = (width, height)
+        camera.start_preview()
+        time.sleep(2)
+        camera.capture(stream, 'rgb')
     # Rewind the stream for reading
     stream.seek(0)
     # Calculate the actual image size in the stream (accounting for rounding
@@ -80,9 +79,9 @@ def main():
     # floating point values in the range 0 to 1 (a typical format for some
     # sorts of analysis)
     image = image.astype(np.float, copy=False)
-    
-    print(image)
+    image = image / 255.0
 
+    print(image)
 
 
 if __name__ == '__main__':
