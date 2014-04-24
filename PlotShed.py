@@ -106,11 +106,11 @@ def main():
     pyplot.xlabel('Hours (HST)')
     pyplot.grid()
 
-    HumidityAxes = HumidityAxes.twinx()
-    HumidityAxes.set_ylabel('Abs. Hum. (g/m^3)', color='b')
+    AbsHumidityAxes = HumidityAxes.twinx()
+    AbsHumidityAxes.set_ylabel('Abs. Hum. (g/m^3)', color='b')
     pyplot.plot(times, data['AH'], 'bo', label="Abs. Hum.", mew=0, ms=3)
     pyplot.yticks(range(00,40,5))
-    pyplot.ylim(00,30)
+    pyplot.ylim(5,25)
 
     pyplot.xticks(range(0,25,1))
     pyplot.xlim(0,24)
@@ -123,7 +123,7 @@ def main():
     pyplot.plot(times, data['temp3'], 'ko', label="Termperature3", mew=0, ms=3)
     pyplot.xticks(range(0,25,1))
     pyplot.xlim(0,24)
-    pyplot.ylim(70,90)
+    pyplot.ylim(65,95)
     pyplot.xlabel('Hours (HST)')
     pyplot.ylabel("Temperature (F)")
     pyplot.grid()

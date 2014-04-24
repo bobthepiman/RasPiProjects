@@ -124,15 +124,15 @@ def main():
                           'temp3': [ascii.convert_numpy('f4')],
                           'hum': [ascii.convert_numpy('f4')],
                           'AH': [ascii.convert_numpy('f4')],
-                          'status': [ascii.convert_numpy('S5')],
+                          'status': [ascii.convert_numpy('S11')],
                           })
     else:
         data = []
-    if len(data) > 15:
+    if len(data) > 12:
         translation = {'OK':0, 'HUMID':1, 'WET':2, 'HUMID-ALARM':1, 'WET-ALARM':2}
-        recent_status_vals = [translation[val] for val in data['status'][-10:]]
+        recent_status_vals = [translation[val] for val in data['status'][-6:]]
         recent_status = np.mean(recent_status_vals)
-        recent_alarm = ('HUMID-ALARM' in data['status'][-10:]) or ('WET-ALARM' in data['status'][-10:])
+        recent_alarm = ('HUMID-ALARM' in data['status'][-12:]) or ('WET-ALARM' in data['status'][-12:])
         logger.debug('  Recent Status = {:.2f}, Current Status = {}, Recent alarm: {}'.format(recent_status, status, recent_alarm))
         if (recent_status > 0.5) and not status == 'OK' and not recent_alarm:
             status = status + '-ALARM'
@@ -160,7 +160,7 @@ def main():
                                       'temp3': [ascii.convert_numpy('f4')],
                                       'hum': [ascii.convert_numpy('f4')],
                                       'AH': [ascii.convert_numpy('f4')],
-                                      'status': [ascii.convert_numpy('S5')],
+                                      'status': [ascii.convert_numpy('S11')],
                                       'threshold humid': [ascii.convert_numpy('f4')],
                                       'threshold wet': [ascii.convert_numpy('f4')],
                                       })
@@ -168,6 +168,8 @@ def main():
             logger.critical("  Failed to read data file: {0} {1} {2}".format(sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2]))
     ## Add row to table
     logger.debug("  Writing new row to data table.")
+    if len(sensor.temperatures_F) < 2:
+        sensor.temperatures_F = [float('nan'), float('nan')]
     SummaryTable.add_row((timestring[0:10], timestring[11:23], \
                           sensor.temperatures_F[0], sensor.temperatures_F[1], \
                           DHT.temperature_F, DHT.humidity, AH, status, threshold_humid, threshold_wet))
