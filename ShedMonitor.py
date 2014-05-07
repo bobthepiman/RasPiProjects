@@ -128,14 +128,16 @@ def main():
                           })
     else:
         data = []
-    if len(data) > 12:
-        translation = {'OK':0, 'HUMID':1, 'WET':2, 'HUMID-ALARM':1, 'WET-ALARM':2}
+
+    translation = {'OK':0, 'HUMID':1, 'WET':2, 'ALARM':2}
+    if len(data) > 6:
         recent_status_vals = [translation[val] for val in data['status'][-6:]]
         recent_status = np.mean(recent_status_vals)
-        recent_alarm = ('HUMID-ALARM' in data['status'][-12:]) or ('WET-ALARM' in data['status'][-12:])
+    if len(data) > 23:
+        recent_alarm = ('HUMID-ALARM' in data['status'][-23:]) or ('WET-ALARM' in data['status'][-23:])
         logger.debug('  Recent Status = {:.2f}, Current Status = {}, Recent alarm: {}'.format(recent_status, status, recent_alarm))
         if (recent_status > 0.5) and not status == 'OK' and not recent_alarm:
-            status = status + '-ALARM'
+            status = 'ALARM'
 
 
     ##-------------------------------------------------------------------------
