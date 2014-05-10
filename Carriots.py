@@ -41,7 +41,7 @@ class Client(object):
         carriots_data = {"protocol":"v2",
                          "device":self.device_id,
                          "at":int(time.mktime(datetime.datetime.utcnow().timetuple())),
-                         "data":{"value":data}
+                         "data":data,
                         }
         try:
             carriots_response=self.send(carriots_data)

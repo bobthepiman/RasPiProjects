@@ -134,7 +134,7 @@ def main():
         recent_status_vals = [translation[val] for val in data['status'][-6:]]
         recent_status = np.mean(recent_status_vals)
     if len(data) > 23:
-        recent_alarm = ('HUMID-ALARM' in data['status'][-23:]) or ('WET-ALARM' in data['status'][-23:])
+        recent_alarm = 'ALARM' in data['status'][-23:]
         logger.debug('  Recent Status = {:.2f}, Current Status = {}, Recent alarm: {}'.format(recent_status, status, recent_alarm))
         if (recent_status > 0.5) and not status == 'OK' and not recent_alarm:
             status = 'ALARM'
