@@ -96,7 +96,7 @@ def main():
     pyplot.fill_between(times, 0, data['hum'], where=(data['status']=="ALARM"), color='red', alpha=0.5)
     pyplot.fill_between(times, 90, 100, where=(data['status']=="HUMID-ALARM"), color='yellow', alpha=0.8)
     pyplot.fill_between(times, 90, 100, where=(data['status']=="WET-ALARM"), color='red', alpha=0.8)
-    pyplot.yticks(range(20,100,10))
+    pyplot.yticks(range(10,100,10))
     pyplot.ylim(20,100)
     pyplot.ylabel("Humidity (%)")
 
@@ -108,7 +108,7 @@ def main():
     AbsHumidityAxes = HumidityAxes.twinx()
     AbsHumidityAxes.set_ylabel('Abs. Hum. (g/m^3)', color='b')
     pyplot.plot(times, data['AH'], 'bo', label="Abs. Hum.", mew=0, ms=3)
-    pyplot.yticks(range(00,40,5))
+    pyplot.yticks(range(00,45,5))
     pyplot.ylim(5,25)
 
     pyplot.xticks(range(0,25,1))
@@ -122,7 +122,7 @@ def main():
     pyplot.plot(times, data['temp3'], 'ko', label="Termperature3", mew=0, ms=3)
     pyplot.xticks(range(0,25,1))
     pyplot.xlim(0,24)
-    pyplot.ylim(65,95)
+    pyplot.ylim(65,100)
     pyplot.xlabel('Hours (HST)')
     pyplot.ylabel("Temperature (F)")
     pyplot.grid()
