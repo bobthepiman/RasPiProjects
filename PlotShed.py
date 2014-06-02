@@ -86,7 +86,12 @@ def main():
     Figure = pyplot.figure(figsize=(16,10), dpi=dpi)
     times = [(time.strptime(val, '%H:%M:%S HST').tm_hour + time.strptime(val, '%H:%M:%S HST').tm_min/60.) for val in data['time'] ]
 
-    HumidityAxes = pyplot.axes([0.10, 0.40, 0.9, 0.45])
+    HumidityAxes = pyplot.axes([0.10, 0.43, 0.9, 0.40])
+    title_string = '{:10s} at {:12s}:\n'.format(data['date'][-1], data['time'][-1])
+    title_string += 'Outside Temperature = {:.1f} F, '.format(data['temp2'][-1])
+    title_string += 'Inside Temperature = {:.1f} F, '.format(data['temp3'][-1])
+    title_string += 'Inside Humidity = {:.0f} %'.format(data['hum'][-1])
+    pyplot.title(title_string)
     pyplot.plot(times, data['hum'], 'ko', label="Humidity", mew=0, ms=3)
     pyplot.plot(times, data['threshold humid'], 'y-', label='threshold humidity', linewidth=3, alpha=0.8)
     pyplot.plot(times, data['threshold wet'], 'r-', label='threshold humidity', linewidth=3, alpha=0.8)
@@ -97,38 +102,49 @@ def main():
     pyplot.fill_between(times, 90, 100, where=(data['status']=="HUMID-ALARM"), color='yellow', alpha=0.8)
     pyplot.fill_between(times, 90, 100, where=(data['status']=="WET-ALARM"), color='red', alpha=0.8)
     pyplot.yticks(range(10,100,10))
-    pyplot.ylim(20,100)
+    pyplot.ylim(25,95)
     pyplot.ylabel("Humidity (%)")
 
-    pyplot.xticks(range(0,25,1))
+    pyplot.xticks([])
     pyplot.xlim(0,24)
-    pyplot.xlabel('Hours (HST)')
     pyplot.grid()
 
     AbsHumidityAxes = HumidityAxes.twinx()
     AbsHumidityAxes.set_ylabel('Abs. Hum. (g/m^3)', color='b')
     pyplot.plot(times, data['AH'], 'bo', label="Abs. Hum.", mew=0, ms=3)
     pyplot.yticks(range(00,45,5))
-    pyplot.ylim(5,25)
+    pyplot.ylim(7.5,22.5)
 
     pyplot.xticks(range(0,25,1))
     pyplot.xlim(0,24)
     pyplot.xlabel('Hours (HST)')
 
 
-    TemperatureAxes = pyplot.axes([0.10, 0.05, 0.9, 0.30])
+    TemperatureAxes = pyplot.axes([0.10, 0.05, 0.9, 0.35])
     pyplot.plot(times, data['temp1'], 'go', label="Termperature1", mew=0, ms=3)
     pyplot.plot(times, data['temp2'], 'bo', label="Termperature2", mew=0, ms=3)
     pyplot.plot(times, data['temp3'], 'ko', label="Termperature3", mew=0, ms=3)
     pyplot.xticks(range(0,25,1))
+    pyplot.yticks(range(50,110,10))
     pyplot.xlim(0,24)
-    pyplot.ylim(65,100)
+    pyplot.ylim(65,105)
     pyplot.xlabel('Hours (HST)')
     pyplot.ylabel("Temperature (F)")
     pyplot.grid()
 
     pyplot.savefig(PlotFile, dpi=dpi, bbox_inches='tight', pad_inches=0.10)
     logger.info("Done")
+
+
+    ##-------------------------------------------------------------------------
+    ## Create Daily Symlink if Not Already
+    ##-------------------------------------------------------------------------
+    LinkFileName = 'latest.png'
+    LinkFile = os.path.join('/', 'home', 'joshw', 'logs', LinkFileName)
+    if not os.path.exists(LinkFile):
+        logger.info('Making {} symlink to {}'.format(LinkFile, PlotFile))
+        os.symlink(PlotFile, LinkFile)
+        logger.info("Done")
 
 
 if __name__ == '__main__':
