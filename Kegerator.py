@@ -9,6 +9,7 @@ import argparse
 import logging
 import numpy as np
 import datetime
+import math
 
 import RPi.GPIO as GPIO
 
@@ -95,8 +96,8 @@ def main(args):
     logger.debug("Preparing astropy table object for data file {}".format(datafile))
     if not os.path.exists(datafile):
         logger.info("Making new astropy table object")
-        SummaryTable = table.Table(names=('date', 'time', 'AmbTemp', 'KegTemp1', 'KegTemp2', 'RH', 'AH', 'status'), \
-                                   dtype=('S10', 'S12', 'f4', 'f4', 'f4', 'f4', 'f4', 'S8') )
+        SummaryTable = table.Table(names=('date', 'time', 'AmbTemp', 'KegTemp', 'KegTemp1', 'KegTemp2', 'KegTemp3', 'RH', 'AH', 'status'), \
+                                   dtype=('S10',  'S12',  'f4',      'f4',      'f4',       'f4',       'f4',       'f4', 'f4', 'S8') )
     else:
         logger.debug("Reading astropy table object from file: {0}".format(datafile))
         try:
@@ -107,8 +108,10 @@ def main(args):
                                       'date': [ascii.convert_numpy('S10')],
                                       'time': [ascii.convert_numpy('S12')],
                                       'AmbTemp': [ascii.convert_numpy('f4')],
+                                      'KegTemp': [ascii.convert_numpy('f4')],
                                       'KegTemp1': [ascii.convert_numpy('f4')],
                                       'KegTemp2': [ascii.convert_numpy('f4')],
+                                      'KegTemp3': [ascii.convert_numpy('f4')],
                                       'hum': [ascii.convert_numpy('f4')],
                                       'AH': [ascii.convert_numpy('f4')],
                                       'status': [ascii.convert_numpy('S11')],
@@ -137,7 +140,10 @@ def main(args):
         logger.info('Temperature {:.1f} is less than {:.1f}.  Turning freezer {}.'.format(temperature, temp_low, status))
         GPIO.output(23, False)
     else:
-        status = SummaryTable['status'][-1]
+        if len(SummaryTable) > 0:
+            status = SummaryTable['status'][-1]
+        else:
+            status = 'unknown'
         logger.info('Temperature if {:.1f}.  Taking no action.  Status is {}'.format(temperature, status))
 
 
@@ -145,10 +151,10 @@ def main(args):
     ## Add row to data table
     ##-------------------------------------------------------------------------
     logger.debug("Writing new row to data table.")
-    while len(temperatures_F) < 3:
+    while len(temperatures_F) < 4:
         temperatures_F.append(float('nan'))
-    SummaryTable.add_row((DateString, TimeString, ambient_temperature, \
-                          temperatures_F[0], temperatures_F[1], \
+    SummaryTable.add_row((DateString, TimeString, ambient_temperature, temperature, \
+                          temperatures_F[0], temperatures_F[1], temperatures_F[2], \
                           RH, AH, status))
     ## Write Table to File
     logger.debug("  Writing new data file.")
@@ -216,7 +222,7 @@ def plot(args):
     LogFileHandler.setFormatter(LogFormat)
     logger.addHandler(LogFileHandler)
 
-    logger.info("PlotKegerator.py invoked")
+    logger.info("Kegerator.py invoked with --plot option")
     logger.info("  Making plot for day of {}".format(args.date))
 
 
@@ -232,8 +238,10 @@ def plot(args):
                           'date': [ascii.convert_numpy('S10')],
                           'time': [ascii.convert_numpy('S12')],
                           'AmbTemp': [ascii.convert_numpy('f4')],
+                          'KegTemp': [ascii.convert_numpy('f4')],
                           'KegTemp1': [ascii.convert_numpy('f4')],
                           'KegTemp2': [ascii.convert_numpy('f4')],
+                          'KegTemp3': [ascii.convert_numpy('f4')],
                           'RH': [ascii.convert_numpy('f4')],
                           'AH': [ascii.convert_numpy('f4')],
                           'status': [ascii.convert_numpy('S11')],
@@ -245,36 +253,47 @@ def plot(args):
     ##-------------------------------------------------------------------------
     ## Make Plot
     ##-------------------------------------------------------------------------
-        plot_upper_temp = 50.0
-        plot_lower_temp = 28.0
+        plot_upper_temp = 45
+        plot_lower_temp = 29
         pyplot.ioff()
-        if len(data) > 2:
+        plotpos = [
+                   [0.05, 0.59, 0.65, 0.40], [0.73, 0.59, 0.21, 0.40],\
+                   [0.05, 0.52, 0.65, 0.07], [0.73, 0.52, 0.21, 0.07],\
+                   [0.05, 0.25, 0.65, 0.24], [0.73, 0.25, 0.21, 0.24],\
+                   [0.05, 0.05, 0.65, 0.18], [0.73, 0.05, 0.21, 0.18],\
+                  ]
+        if len(data) > 1:
             logger.info("  Generating plot {} ... ".format(PlotFile))
             dpi = 100
             pyplot.figure(figsize=(14,8), dpi=dpi)
+
             ## Plot Temperature for This Day
             logger.debug("  Rendering Temperature Plot.")
-            TemperatureAxes = pyplot.axes([0.1, 0.5, 0.60, 0.50], xticklabels=[])
+            TemperatureAxes = pyplot.axes(plotpos[0], xticklabels=[])
             pyplot.title("Kegerator Temperatures for "+args.date)
-            pyplot.plot(time_decimal, data['AmbTemp'], 'ko', label="Ambient Temp", markersize=3, markeredgewidth=0)
-            pyplot.plot(time_decimal, data['KegTemp1'], 'go', label="Kegerator Temp 1", markersize=3, markeredgewidth=0)
-            pyplot.plot(time_decimal, data['KegTemp2'], 'bo', label="Kegerator Temp 2", markersize=3, markeredgewidth=0)
-            pyplot.ylabel("Temperature (F)")
+            pyplot.plot(time_decimal, data['KegTemp'], 'ko', label="Median Temp.", markersize=3, markeredgewidth=0)
+            pyplot.plot(time_decimal, data['KegTemp1'], 'bo', label="Temp. 1", markersize=2, markeredgewidth=0, alpha=0.6)
+            pyplot.plot(time_decimal, data['KegTemp2'], 'go', label="Temp. 2", markersize=2, markeredgewidth=0, alpha=0.6)
+            pyplot.plot(time_decimal, data['KegTemp3'], 'yo', label="Temp. 3", markersize=2, markeredgewidth=0, alpha=0.6)
+            pyplot.plot([DecimalTime, DecimalTime], [-100,100], 'g-', alpha=0.4)
+            pyplot.ylabel("Kegerator Temp. (F)")
             pyplot.xlim(0, 24)
             pyplot.xticks(np.arange(0,24,2))
             pyplot.ylim(plot_lower_temp, plot_upper_temp)
             pyplot.grid()
+            pyplot.legend(loc='best', prop={'size': 10})
             TemperatureAxes.axhline(32, color='red', lw=4)
             TemperatureAxes.axhline(temp_low, color='blue', lw=4)
             TemperatureAxes.axhline(temp_high, color='blue', lw=4)
 
-            ## Plot Temperature for Last 2 Hours
+            ## Plot Temperature for Last Hour
             logger.debug("  Rendering Recent Temperature Plot.")
-            RecentTemperatureAxes = pyplot.axes([0.73, 0.5, 0.21, 0.50], xticklabels=[])
+            RecentTemperatureAxes = pyplot.axes(plotpos[1], xticklabels=[], yticklabels=[])
             pyplot.title("Last Hour")
-            pyplot.plot(time_decimal, data['AmbTemp'], 'ko', label="Ambient Temp", markersize=3, markeredgewidth=0)
-            pyplot.plot(time_decimal, data['KegTemp1'], 'go', label="Kegerator Temp 1", markersize=3, markeredgewidth=0)
-            pyplot.plot(time_decimal, data['KegTemp2'], 'bo', label="Kegerator Temp 2", markersize=3, markeredgewidth=0)
+            pyplot.plot(time_decimal, data['KegTemp'], 'ko', label="Kegerator Temp", markersize=3, markeredgewidth=0)
+            pyplot.plot(time_decimal, data['KegTemp1'], 'bo', label="Kegerator Temp 1", markersize=2, markeredgewidth=0, alpha=0.6)
+            pyplot.plot(time_decimal, data['KegTemp2'], 'go', label="Kegerator Temp 2", markersize=2, markeredgewidth=0, alpha=0.6)
+            pyplot.plot(time_decimal, data['KegTemp3'], 'yo', label="Kegerator Temp 3", markersize=2, markeredgewidth=0, alpha=0.6)
             pyplot.plot([DecimalTime, DecimalTime], [-100,100], 'g-', alpha=0.4)
             pyplot.xticks(np.arange(0,24,0.25))
             if DecimalTime > 1.0:
@@ -291,51 +310,82 @@ def plot(args):
             translator = {'On': 1, 'Off': 0, 'unknown': -0.25}
             relay_state = [translator[val] for val in data['status']]
             logger.debug("  Rendering Relay Status Plot.")
-            RelayAxes = pyplot.axes([0.1, 0.4, 0.60, 0.10], yticklabels=[])
-            pyplot.plot(time_decimal, relay_state, 'k-', markersize=3, markeredgewidth=0)
+            RelayAxes = pyplot.axes(plotpos[2], yticklabels=[])
+            pyplot.plot(time_decimal, relay_state, 'ko-', markersize=3, markeredgewidth=0)
+            pyplot.plot([DecimalTime, DecimalTime], [-1,2], 'g-', alpha=0.4)
+            pyplot.ylabel("Relay")
             pyplot.xlim(0, 24)
+            pyplot.yticks([0,1])
+            
             pyplot.ylim(-0.5,1.5)
             pyplot.xticks(np.arange(0,24,2))
             pyplot.grid()
 
-            ## Plot Relay State for Last Two Hours
+            ## Plot Relay State for Last Hour
             logger.debug("  Rendering Recent Relay State Plot.")
-            RecentRelayAxes = pyplot.axes([0.73, 0.4, 0.21, 0.10], yticklabels=[])
-            pyplot.plot(time_decimal, relay_state, 'k-', markersize=3, markeredgewidth=0)
+            RecentRelayAxes = pyplot.axes(plotpos[3], yticklabels=[])
+            pyplot.plot(time_decimal, relay_state, 'ko-', markersize=3, markeredgewidth=0)
             pyplot.plot([DecimalTime, DecimalTime], [-1,2], 'g-', alpha=0.4)
             pyplot.xticks(np.arange(0,24,0.25))
             if DecimalTime > 1.0:
                 pyplot.xlim(DecimalTime-1.0, DecimalTime+0.1)
             else:
                 pyplot.xlim(0,1.1)
+            pyplot.yticks([0,1])
             pyplot.ylim(-0.5,1.5)
             pyplot.grid()
 
 
-#             ## Plot Humidity for This Day
-#             HumidityAxes = pyplot.axes([0.1, 0.08, 0.60, 0.24])
-#             logger.debug("  Rendering Humidity Plot.")
-#             pyplot.title("Kegerator Humidity for "+args.date)
-#             pyplot.plot(time_decimal, data['RH'], 'bo', label="Humidity", markersize=2, markeredgewidth=0)
-#             pyplot.ylabel("Humidity (%)")
-#             pyplot.xlabel("Time (Hours HST)")
-#             pyplot.xlim(0, 24)
-#             pyplot.ylim(20,100)
-#             pyplot.xticks(np.arange(0,24,2))
-#             pyplot.grid()
-# 
-#             ## Plot Humidity for Last 2 Hours
-#             logger.debug("  Rendering Recent Humidity Plot.")
-#             RecentHumidityAxes = pyplot.axes([0.73, 0.08, 0.21, 0.24])
-#             pyplot.title("Last Hour")
-#             pyplot.plot(time_decimal, data['RH'], 'bo', label="Humidity", markersize=2, markeredgewidth=0)
-#             pyplot.xticks(np.arange(0,24,0.25))
-#             if DecimalTime > 1.0:
-#                 pyplot.xlim(DecimalTime-1.0, DecimalTime)
-#             else:
-#                 pyplot.xlim(0,1)
-#             pyplot.ylim(20,100)
-#             pyplot.grid()
+            ## Plot Humidity for This Day
+            HumidityAxes = pyplot.axes(plotpos[4], xticklabels=[])
+            logger.debug("  Rendering Humidity Plot.")
+            pyplot.plot(time_decimal, data['RH'], 'bo', label="Humidity", markersize=3, markeredgewidth=0)
+            pyplot.plot([DecimalTime, DecimalTime], [0,100], 'g-', alpha=0.4)
+            pyplot.ylabel("Humidity (%)")
+            pyplot.xlabel("Time (Hours HST)")
+            pyplot.xlim(0, 24)
+            pyplot.ylim(30,100)
+            pyplot.xticks(np.arange(0,24,2))
+            pyplot.grid()
+
+            ## Plot Humidity for Last 2 Hours
+            logger.debug("  Rendering Recent Humidity Plot.")
+            RecentHumidityAxes = pyplot.axes(plotpos[5], yticklabels=[], xticklabels=[])
+            pyplot.plot(time_decimal, data['RH'], 'bo', label="Humidity", markersize=3, markeredgewidth=0)
+            pyplot.plot([DecimalTime, DecimalTime], [0,100], 'g-', alpha=0.4)
+            pyplot.xticks(np.arange(0,24,0.25))
+            if DecimalTime > 1.0:
+                pyplot.xlim(DecimalTime-1.0, DecimalTime+0.1)
+            else:
+                pyplot.xlim(0,1.1)
+            pyplot.ylim(30,100)
+            pyplot.grid()
+
+            ## Plot Case Temperature for This Day
+            logger.debug("  Rendering Case Temperature Plot.")
+            AmbTemperatureAxes = pyplot.axes(plotpos[6])
+            pyplot.plot(time_decimal, data['AmbTemp'], 'ro', label="Ambient Temp", markersize=3, markeredgewidth=0)
+            pyplot.plot([DecimalTime, DecimalTime], [-100,100], 'g-', alpha=0.4)
+            pyplot.ylabel("Case Temp. (F)")
+            pyplot.xlim(0, 24)
+            pyplot.xticks(np.arange(0,24,2))
+            pyplot.yticks(np.arange(60,100,5))
+            pyplot.ylim(math.floor(min(data['AmbTemp'])-6), math.ceil(max(data['AmbTemp'])+6))
+            pyplot.grid()
+
+            ## Plot Case Temperature for Last Hour
+            logger.debug("  Rendering Recent Case Temperature Plot.")
+            RecentAmbTemperatureAxes = pyplot.axes(plotpos[7], yticklabels=[])
+            pyplot.plot(time_decimal, data['AmbTemp'], 'ro', label="Ambient Temp", markersize=3, markeredgewidth=0)
+            pyplot.plot([DecimalTime, DecimalTime], [-100,100], 'g-', alpha=0.4)
+            pyplot.xticks(np.arange(0,24,0.25))
+            pyplot.yticks(np.arange(60,100,5))
+            pyplot.ylim(math.floor(min(data['AmbTemp'])-6), math.ceil(max(data['AmbTemp'])+6))
+            if DecimalTime > 1.0:
+                pyplot.xlim(DecimalTime-1.0, DecimalTime+0.1)
+            else:
+                pyplot.xlim(0,1.1)
+            pyplot.grid()
 
             logger.debug("  Saving plot to file: {}".format(PlotFile))
             pyplot.savefig(PlotFile, dpi=dpi, bbox_inches='tight', pad_inches=0.05)
