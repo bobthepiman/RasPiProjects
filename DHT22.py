@@ -14,27 +14,30 @@ import re
 ## Define DHT22 object to hold information
 ##-----------------------------------------------------------------------------
 class DHT22(object):
-    _singletons = dict()
-
-    def __new__(cls):
-        if not cls in cls._singletons:
-            cls._singletons[cls] = object.__new__(cls)
-        return cls._singletons[cls]
-
-    def __init__(self):
+    def __init__(self, pin=18):
         self.temperature = None
         self.temperature_C = None
         self.temperature_F = None
         self.humidity = None
         self.time_struct = time.gmtime()
+        self.pin = pin
 
     def time(self):
         return time.strftime('%Y/%m/%d %H:%M:%S UT', self.time_struct)
 
     def read(self):
-        DHTexec = os.path.join('/', 'home', 'joshw', 'bin', \
-                               'Adafruit-Raspberry-Pi-Python-Code', \
-                               'Adafruit_DHT_Driver', 'Adafruit_DHT')
+        paths = [
+                 os.path.join(os.path.expanduser('~'), 'bin', 'Adafruit-Raspberry-Pi-Python-Code'),
+                 os.path.join(os.path.expanduser('~'), 'Adafruit-Raspberry-Pi-Python-Code'),
+                 os.path.join(os.path.expanduser('~joshw'), 'bin', 'Adafruit-Raspberry-Pi-Python-Code'),
+                 os.path.join(os.path.expanduser('~joshw'), 'Adafruit-Raspberry-Pi-Python-Code'),
+                ]
+        for trypath in paths:
+            if os.path.exists(trypath):
+                DHTexec = os.path.join(trypath, 'Adafruit_DHT_Driver', 'Adafruit_DHT')
+#         DHTexec = os.path.join('/', 'home', 'joshw', 'bin', \
+#                                'Adafruit-Raspberry-Pi-Python-Code', \
+#                                'Adafruit_DHT_Driver', 'Adafruit_DHT')
 #         DHTexec = os.path.join('/usr', 'local', 'bin', 'Adafruit_DHT')
 #         DHTexec = os.path.join('Adafruit_DHT')
         temp_match = None
@@ -42,7 +45,7 @@ class DHT22(object):
         while not temp_match and not hum_match:
             try:
                 self.time_struct = time.gmtime()
-                output = subprocess.check_output([DHTexec, "2302", "18"])
+                output = subprocess.check_output([DHTexec, "2302", str(self.pin)])
             except subprocess.CalledProcessError as e:
 #                 print('Command: {}'.format(repr(e.cmd)))
 #                 print('Returncode: {}'.format(e.returncode))
