@@ -19,6 +19,14 @@ import humidity
 import astropy.io.ascii as ascii
 import astropy.table as table
 
+'''
+Crontab to run ShedMonitor.py:
+
+PYTHONPATH = /home/joshw/bin/RasPiProjects/
+@reboot  /sbin/modprobe w1-gpio ; /sbin/modprobe w1-therm
+*/3  * * * * nice /usr/bin/python2.7 /home/joshw/bin/RasPiProjects/ShedMonitor.py &> /home/joshw/logs/crontab_ShedMonitor.txt
+*/15 * * * * nice /usr/bin/python2.7 /home/joshw/bin/RasPiProjects/PlotShed.py &> /home/joshw/logs/crontab_PlotShed.txt
+'''
 
 ##-------------------------------------------------------------------------
 ## Main Program
