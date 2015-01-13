@@ -35,11 +35,6 @@ class DHT22(object):
         for trypath in paths:
             if os.path.exists(trypath):
                 DHTexec = os.path.join(trypath, 'Adafruit_DHT_Driver', 'Adafruit_DHT')
-#         DHTexec = os.path.join('/', 'home', 'joshw', 'bin', \
-#                                'Adafruit-Raspberry-Pi-Python-Code', \
-#                                'Adafruit_DHT_Driver', 'Adafruit_DHT')
-#         DHTexec = os.path.join('/usr', 'local', 'bin', 'Adafruit_DHT')
-#         DHTexec = os.path.join('Adafruit_DHT')
         temp_match = None
         hum_match = None
         while not temp_match and not hum_match:
@@ -47,9 +42,6 @@ class DHT22(object):
                 self.time_struct = time.gmtime()
                 output = subprocess.check_output([DHTexec, "2302", str(self.pin)])
             except subprocess.CalledProcessError as e:
-#                 print('Command: {}'.format(repr(e.cmd)))
-#                 print('Returncode: {}'.format(e.returncode))
-#                 print('Output: {}'.format(e.output))
                 raise
             except:
                 raise
@@ -67,6 +59,7 @@ class DHT22(object):
                 self.humidity = float(hum_match.group(1))
             else:
                 self.humidity = None
+        return self.temperature_C, self.temperature_F, self.humidity
 
 
 ##-------------------------------------------------------------------------
