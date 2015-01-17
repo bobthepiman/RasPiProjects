@@ -19,15 +19,6 @@ import humiditycalc
 # import astropy.io.ascii as ascii
 # import astropy.table as table
 
-'''
-Crontab to run ShedMonitor.py:
-
-PYTHONPATH = /home/joshw/bin/RasPiProjects/
-@reboot  /sbin/modprobe w1-gpio ; /sbin/modprobe w1-therm
-*/3  * * * * nice /usr/bin/python2.7 /home/joshw/bin/RasPiProjects/ShedMonitor.py
-*/15 * * * * nice /usr/bin/python2.7 /home/joshw/bin/RasPiProjects/PlotShed.py
-'''
-
 threshold_humid = 55
 threshold_wet = 75
 
@@ -50,7 +41,7 @@ def measure(verbose=False):
     LogConsoleHandler.setFormatter(LogFormat)
     logger.addHandler(LogConsoleHandler)
     ## Set up file output
-    LogFileName = os.path.join('/', 'home', 'joshw', 'logs', 'ShedLog.txt')
+    LogFileName = os.path.join('/', 'home', 'joshw', 'logs', time.strftime('HumidityLog_%Y%m%d.txt', time.localtime()))
     LogFileHandler = logging.FileHandler(LogFileName)
     LogFileHandler.setLevel(logging.DEBUG)
     LogFileHandler.setFormatter(LogFormat)
