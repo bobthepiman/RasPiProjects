@@ -75,7 +75,7 @@ def measure(verbose=False):
     DHT_temperature_C = np.median(temps_C)
     DHT_humidity = np.median(hums)
     logger.info('  Temperature = {:.3f} F, Humidity = {:.1f} %'.format(DHT_temperature_F, DHT_humidity))
-    AH = humidity.relative_to_absolute_humidity(DHT_temperature_C, DHT_humidity)
+    AH = humiditycalc.relative_to_absolute_humidity(DHT_temperature_C, DHT_humidity)
     logger.info('  Absolute Humidity = {:.2f} g/m^3'.format(AH))
 
 #     logger.info('Reading DS18B20')
