@@ -6,8 +6,8 @@ setup(
     packages = find_packages(),
     entry_points = {
         'console_scripts': [
-            'measureshed = ShedMonitor:main',
-            'plotshed = ShedMonitor:plot',
+            'measurehumidity = HumidityMonitor:main',
+            'plothumidity = HumidityMonitor:plot',
         ]
     }
 )

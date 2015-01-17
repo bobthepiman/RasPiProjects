@@ -14,7 +14,7 @@ import urllib2
 import DHT22
 import DS18B20
 import Carriots
-import humidity
+import humiditycalc
 
 # import astropy.io.ascii as ascii
 # import astropy.table as table
