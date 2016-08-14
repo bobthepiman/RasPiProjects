@@ -9,11 +9,12 @@ import argparse
 import logging
 import time
 import numpy as np
-import urllib2
 
-import DHT22
-import DS18B20
-import Carriots
+import Adafruit_DHT
+# import DHT22
+# import DS18B20
+# import urllib2
+# import Carriots
 import humiditycalc
 
 # import astropy.io.ascii as ascii
@@ -52,36 +53,28 @@ def measure(verbose=False):
     ##-------------------------------------------------------------------------
     logger.info('#### Reading Temperature and Humidity Sensors ####')
     logger.info('Reading DHT22')
-    DHT = DHT22.DHT22()
-    temps = []
-    temps_C = []
-    hums = []
-    for i in range(0,3):
-        DHT.read()
-        logger.debug('  Temperature = {:.3f} F, Humidity = {:.1f} %'.format(DHT.temperature_F, DHT.humidity))
-        temps.append(DHT.temperature_F)
-        temps_C.append(DHT.temperature_C)
-        hums.append(DHT.humidity)
-    DHT_temperature_F = np.median(temps)
-    DHT_temperature_C = np.median(temps_C)
-    DHT_humidity = np.median(hums)
+    sensor = Adafruit_DHT.AM2302
+    pin = 4
+    DHT_humidity, DHT_temperature_C = Adafruit_DHT.read_retry(sensor, pin)
+    if not DHT_humidity or not DHT_temperature_C:
+        DHT_humidity, DHT_temperature_C = Adafruit_DHT.read_retry(sensor, pin)
+    if not DHT_humidity or not DHT_temperature_C:
+        print('Read failed a second time.')
+        sys.exit(1)
+    
+    DHT_temperature_F = 32. + 9./5.*DHT_temperature_C
+
     logger.info('  Temperature = {:.3f} F, Humidity = {:.1f} %'.format(DHT_temperature_F, DHT_humidity))
     AH = humiditycalc.relative_to_absolute_humidity(DHT_temperature_C, DHT_humidity)
     logger.info('  Absolute Humidity = {:.2f} g/m^3'.format(AH))
-
-#     logger.info('Reading DS18B20')
-#     sensor = DS18B20.DS18B20()
-#     sensor.read()
-#     for temp in sensor.temperatures_C:
-#         logger.info('  Temperature = {:.3f} F'.format(temp*9./5.+32.))
 
 
     ##-------------------------------------------------------------------------
     ## Determine Status Using Humidity
     ##-------------------------------------------------------------------------
-    if (DHT.humidity < threshold_humid):
+    if (DHT_humidity < threshold_humid):
         status = 'OK'
-    elif (DHT.humidity > threshold_humid) and (DHT.humidity < threshold_wet):
+    elif (DHT_humidity > threshold_humid) and (DHT_humidity < threshold_wet):
         status = 'HUMID'
     else:
         status = 'WET'
@@ -133,8 +126,8 @@ def measure(verbose=False):
     dataFO.write('{},{},{:.1f},{:.1f},{:.2f},{}\n'.format(
                  timestring[0:10],\
                  timestring[11:23],\
-                 DHT.temperature_F,\
-                 DHT.humidity,\
+                 DHT_temperature_F,\
+                 DHT_humidity,\
                  AH,\
                  status))
 
@@ -172,7 +165,10 @@ def measure(verbose=False):
 ##-------------------------------------------------------------------------
 def plot(verbose=False):
 
+    import matplotlib
+    matplotlib.use('Agg')
     import matplotlib.pyplot as pyplot
+    pyplot.ioff()
 
     ##-------------------------------------------------------------------------
     ## Create logger object
@@ -223,7 +219,8 @@ def plot(verbose=False):
     ##-------------------------------------------------------------------------
     ## Plot
     ##-------------------------------------------------------------------------
-    PlotFileName = time.strftime('%Y%m%d.png', time.localtime())
+#     PlotFileName = time.strftime('%Y%m%d.png', time.localtime())
+    PlotFileName = 'latest.png'
     PlotFile = os.path.join('/', 'home', 'joshw', 'logs', PlotFileName)
     logger.info("Writing Output File: "+PlotFile)
     dpi=72
@@ -263,7 +260,7 @@ def plot(verbose=False):
     pyplot.xticks(range(0,25,1))
     pyplot.yticks(range(50,110,5))
     pyplot.xlim(0,24)
-    pyplot.ylim(60,90)
+    pyplot.ylim(70,100)
     pyplot.xlabel('Hours (HST)')
     pyplot.ylabel("Temperature (F)")
     pyplot.grid()
