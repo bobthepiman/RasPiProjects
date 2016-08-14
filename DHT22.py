@@ -27,14 +27,17 @@ class DHT22(object):
 
     def read(self):
         paths = [
-                 os.path.join(os.path.expanduser('~'), 'bin', 'Adafruit-Raspberry-Pi-Python-Code'),
-                 os.path.join(os.path.expanduser('~'), 'Adafruit-Raspberry-Pi-Python-Code'),
-                 os.path.join(os.path.expanduser('~joshw'), 'bin', 'Adafruit-Raspberry-Pi-Python-Code'),
-                 os.path.join(os.path.expanduser('~joshw'), 'Adafruit-Raspberry-Pi-Python-Code'),
+                 os.path.join(os.path.expanduser('~'), 'bin', 'Adafruit-Raspberry-Pi-Python-Code', 'Adafruit_DHT_Driver', 'Adafruit_DHT'),
+                 os.path.join(os.path.expanduser('~'), 'git', 'Adafruit-Raspberry-Pi-Python-Code', 'Adafruit_DHT_Driver', 'Adafruit_DHT'),
+                 os.path.join(os.path.expanduser('~'), 'Adafruit-Raspberry-Pi-Python-Code', 'Adafruit_DHT_Driver', 'Adafruit_DHT'),
+                 os.path.join(os.path.expanduser('~'), 'bin', 'Adafruit_Python_DHT', 'examples', 'AdafruitDHT.py'),
+                 os.path.join(os.path.expanduser('~'), 'git', 'Adafruit_Python_DHT', 'examples', 'AdafruitDHT.py'),
                 ]
+        DHTexec = None
         for trypath in paths:
             if os.path.exists(trypath):
-                DHTexec = os.path.join(trypath, 'Adafruit_DHT_Driver', 'Adafruit_DHT')
+                DHTexec = trypath
+        assert DHTexec
         temp_match = None
         hum_match = None
         while not temp_match and not hum_match:
